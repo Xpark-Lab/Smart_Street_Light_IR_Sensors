@@ -7,6 +7,13 @@
 
 This open-source repository contains production-minded Arduino firmware and maker documentation for a low-cost, adaptive street-light system. The system uses an LDR for day/night control and FC-51 infrared sensors to detect vehicles or pedestrians. An Arduino UNO drives logic-level N-channel MOSFETs with PWM for dim, full, and smoothly fading output.
 
+## Prototype Hardware
+
+![MOSFET-Based Smart Street Light Hardware Prototype](docs/images/MOSFET_Based_Smart_Street_Light_IR_Sensors_hardware.png)
+
+*Xpark Lab hardware prototype — MOSFET-based smart street light with IR sensing.*
+[Download the original hardware diagram (PDF)](docs/images/MOSFET_Based_Smart_Street_Light_IR_Sensors%20hardwear.pdf)
+
 ## Project Variants
 
 | Variant | Coverage | IR sensors | MOSFET/PWM outputs | Sketch |
