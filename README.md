@@ -5,7 +5,7 @@
 **Research • Design • Prototype • Develop**
 **Bashundhara R/A, Dhaka, Bangladesh**
 
-This open-source repository contains production-minded Arduino firmware and maker documentation for a low-cost, adaptive street-light system. The system uses an LDR for day/night control and FC-51 infrared sensors to detect vehicles or pedestrians. An Arduino UNO drives logic-level N-channel MOSFETs with PWM for dim, full, and smoothly fading output.
+This open-source repository contains Arduino firmware and maker documentation for a low-cost, adaptive street-light system. The finalized system uses a digital LDR sensor for day/night control and three FC-51 infrared sensors to detect vehicles or pedestrians. An Arduino UNO switches three LED channels through IRF540N MOSFETs using PWM-capable pins.
 
 ## Prototype Hardware
 
@@ -19,37 +19,40 @@ This open-source repository contains production-minded Arduino firmware and make
 | Variant | Coverage | IR sensors | MOSFET/PWM outputs | Sketch |
 |---|---|---:|---:|---|
 | Single pole | One lamp | 1 | 1 | `firmware/single_pole/single_pole.ino` |
-| Three-pole adaptive | One road section | 3 | 3 | `firmware/multi_pole_3_lights/multi_pole_3_lights.ino` |
+| Three-pole finalized | One road section | 3 | 3 | `firmware/multi_pole_3_lights/multi_pole_3_lights.ino` |
 
 ## Operating Behavior
 
-### Single pole
+Each LED channel is ON only when both of these conditions are true:
 
-- **Day:** PWM is 0; the lamp is fully off.
-- **Night, no traffic:** PWM remains at 64 (approximately 25%).
-- **Night, detection:** The lamp ramps from standby to PWM 255, remains full for 5 seconds after the last detection, then fades back to 64.
-- Dusk/dawn sensing uses hysteresis: night below 400 ADC and day above 450 ADC.
-- Fading runs every 20 ms in the main loop, independent of Serial output.
+- The digital LDR reports `Dark`.
+- The corresponding IR sensor reports `Object`.
 
-### Three-pole adaptive system
-
-- Each pole has its own brightness, fade target, and 5-second detection hold time.
-- A detected pole receives full brightness.
-- With `ENABLE_LOOKAHEAD true`, the next pole in the direction of travel is also illuminated.
-- Adjacent poles fade to standby after their look-ahead hold expires.
-- All lamps switch off during daytime.
+The LED is OFF in every other case. The three output channels operate independently.
 
 ## Hardware Summary
 
 | Item | Recommendation |
 |---|---|
 | Controller | Arduino UNO |
-| Ambient sensor | 10 kΩ LDR voltage divider on `A0` |
-| Motion/obstacle sensor | FC-51 IR obstacle sensor at 5 V |
-| Lamp switch | IRLZ44N logic-level MOSFET recommended; IRF540N compatible for low-current LED loads |
-| Lamp gate interface | 100–220 Ω gate resistor and 10 kΩ gate-to-source pull-down |
+| Ambient sensor | Digital 3-pin LDR module: VCC, GND, DO |
+| Motion/obstacle sensors | 3x FC-51 IR obstacle sensor modules at 5 V |
+| Lamp switches | 3x IRF540N N-channel MOSFETs |
+| LEDs | 3x LEDs with individual 220 Ω series resistors |
+| Gate resistors | 3x 100 Ω |
+| Gate pull-down resistors | 3x 10 kΩ |
+| Gate interface | Arduino PWM pin → 100 Ω gate resistor → MOSFET Gate |
 
-The lamp is switched on the low side. The MOSFET source connects to ground, drain connects to the lamp negative lead, and gate receives PWM from the Arduino UNO. The lamp positive lead connects to a supply appropriate for the lamp. Never connect mains AC directly to this circuit.
+The LEDs are switched on the low side. For every channel:
+
+1. Connect Arduino `5V` to the LED's 220 Ω series resistor.
+2. Connect the resistor to the LED anode (`+`).
+3. Connect the LED cathode (`-`) to MOSFET Pin 2 (Drain).
+4. Connect MOSFET Pin 3 (Source) to common GND.
+5. Connect the Arduino PWM pin to MOSFET Pin 1 (Gate) through 100 Ω.
+6. Connect 10 kΩ between MOSFET Gate and common GND.
+
+The MOSFETs drive only low-voltage DC LEDs in this project. Never connect mains AC.
 
 ## Quick Start
 
@@ -75,32 +78,27 @@ No third-party Arduino libraries are required.
 
 ## Pin Assignments
 
-### Single pole
+| Function | Arduino UNO pin | Sensor/module state |
+|---|---:|---|
+| Digital LDR DO | `D2` | HIGH in dark |
+| IR 1 OUT | `D3` | LOW when object detected |
+| IR 2 OUT | `D4` | LOW when object detected |
+| IR 3 OUT | `D5` | LOW when object detected |
+| MOSFET 1 Gate | `D9` PWM | Ch1 LED |
+| MOSFET 2 Gate | `D10` PWM | Ch2 LED |
+| MOSFET 3 Gate | `D11` PWM | Ch3 LED |
 
-| Signal | Arduino UNO pin |
-|---|---|
-| LDR divider | `A0` |
-| FC-51 OUT | `D2` |
-| MOSFET gate | `D9` PWM |
-
-### Three-pole
-
-| Pole | FC-51 OUT | MOSFET gate |
-|---|---:|---:|
-| Pole 1 | `D2` | `D9` PWM |
-| Pole 2 | `D3` | `D10` PWM |
-| Pole 3 | `D4` | `D11` PWM |
-
-Shared LDR: `A0`.
+Connect all sensor VCC pins to `5V` and all sensor GND pins to Arduino GND.
 
 ## Repository Guide
 
 - `firmware/single_pole/` — one-pole implementation.
-- `firmware/multi_pole_3_lights/` — three-pole adaptive implementation.
+- `firmware/multi_pole_3_lights/` — finalized three-pole digital-sensor implementation.
 - `docs/wiring_guide.md` — pinouts, schematics, and assembly notes.
 - `docs/bom.md` — Xpark Lab bill of materials.
 - `docs/testing_and_calibration.md` — calibration and commissioning procedure.
 - `docs/images/` — place schematics and build photos here.
+- `test/sensor_test/sensor_test.ino` — standalone digital LDR and IR sensor test.
 
 ## Applications
 

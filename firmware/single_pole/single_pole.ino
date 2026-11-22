@@ -2,8 +2,8 @@
  * Xpark Lab - MOSFET-Based Smart Street Light
  * Single-pole controller for Arduino UNO
  *
- * LDR: A0
- * FC-51 IR sensor: D2
+ * Digital LDR DO: D2
+ * FC-51 IR sensor: D3
  * MOSFET gate PWM: D9
  *
  * Research • Design • Prototype • Develop
@@ -12,112 +12,56 @@
 
 #include <Arduino.h>
 
-const uint8_t LDR_PIN = A0;
-const uint8_t IR_SENSOR_PIN = 2;
+const uint8_t LDR_PIN = 2;
+const uint8_t IR_SENSOR_PIN = 3;
 const uint8_t MOSFET_PIN = 9;
 
-const int DARK_THRESHOLD = 400;
-const int BRIGHT_THRESHOLD = 450;
-const uint8_t DIM_BRIGHTNESS = 64;
-const uint8_t FULL_BRIGHTNESS = 255;
-const uint8_t FADE_STEP = 5;
-const unsigned long FADE_INTERVAL = 20;
-const unsigned long HOLD_DURATION = 5000;
 const unsigned long STATUS_INTERVAL = 250;
 
-// Standard FC-51 modules output LOW when an obstacle is detected.
-// Set false when testing an inverted-output or normally-high module.
+const bool LDR_ACTIVE_HIGH_IN_DARK = true;
 const bool IR_ACTIVE_LOW = true;
 
-bool isNight = false;
-uint8_t currentBrightness = 0;
-uint8_t targetBrightness = 0;
-unsigned long lastDetectTime = 0;
-unsigned long lastFadeTime = 0;
 unsigned long lastStatusTime = 0;
 
-bool readIrDetected() {
-  bool rawLow = (digitalRead(IR_SENSOR_PIN) == LOW);
+bool readIsDark() {
+  const bool rawHigh = (digitalRead(LDR_PIN) == HIGH);
+  return LDR_ACTIVE_HIGH_IN_DARK ? rawHigh : !rawHigh;
+}
+
+bool readIsObjectDetected() {
+  const bool rawLow = (digitalRead(IR_SENSOR_PIN) == LOW);
   return IR_ACTIVE_LOW ? rawLow : !rawLow;
 }
 
-void updateAmbientMode(int ldrValue) {
-  if (!isNight && ldrValue < DARK_THRESHOLD) {
-    isNight = true;
-  } else if (isNight && ldrValue > BRIGHT_THRESHOLD) {
-    isNight = false;
-  }
-}
-
-void updateFadeTarget(bool irDetected, unsigned long now) {
-  if (!isNight) {
-    targetBrightness = 0;
-    return;
-  }
-
-  if (irDetected) {
-    lastDetectTime = now;
-  }
-
-  targetBrightness =
-      (now - lastDetectTime <= HOLD_DURATION) ? FULL_BRIGHTNESS : DIM_BRIGHTNESS;
-}
-
-void fadeLamp(unsigned long now) {
-  if (now - lastFadeTime < FADE_INTERVAL) {
-    return;
-  }
-  lastFadeTime = now;
-
-  if (currentBrightness < targetBrightness) {
-    uint16_t nextBrightness = (uint16_t)currentBrightness + FADE_STEP;
-    currentBrightness = (nextBrightness > targetBrightness)
-                            ? targetBrightness
-                            : (uint8_t)nextBrightness;
-  } else if (currentBrightness > targetBrightness) {
-    int nextBrightness = (int)currentBrightness - FADE_STEP;
-    currentBrightness = (nextBrightness < targetBrightness)
-                            ? targetBrightness
-                            : (uint8_t)nextBrightness;
-  }
-
-  analogWrite(MOSFET_PIN, currentBrightness);
-}
-
-void printStatus(int ldrValue, bool irDetected, unsigned long now) {
+void printStatus(bool isDark, bool isOn, unsigned long now) {
   if (now - lastStatusTime < STATUS_INTERVAL) {
     return;
   }
   lastStatusTime = now;
 
   Serial.print("LDR: ");
-  Serial.print(ldrValue);
-  Serial.print(" | Mode: ");
-  Serial.print(isNight ? "NIGHT" : "DAY");
-  Serial.print(" | IR: ");
-  Serial.print(irDetected ? "DETECTED" : "CLEAR");
-  Serial.print(" | Brightness: ");
-  Serial.println(currentBrightness);
+  Serial.print(isDark ? "Dark" : "Light");
+  Serial.print(" | Ch1: ");
+  Serial.println(isOn ? "ON" : "OFF");
 }
 
 void setup() {
   Serial.begin(9600);
+  pinMode(LDR_PIN, INPUT);
   pinMode(IR_SENSOR_PIN, INPUT);
   pinMode(MOSFET_PIN, OUTPUT);
-  analogWrite(MOSFET_PIN, 0);
-  lastDetectTime = millis() - HOLD_DURATION - 1;
+  digitalWrite(MOSFET_PIN, LOW);
 
   Serial.println("Xpark Lab Smart Street Light - Single Pole");
-  Serial.println("Mode: DAY/NIGHT | IR: DETECTED/CLEAR");
+  Serial.println("LDR: Dark/Light | Ch1: ON/OFF");
 }
 
 void loop() {
   const unsigned long now = millis();
-  const int ldrValue = analogRead(LDR_PIN);
-  const bool irDetected = readIrDetected();
+  const bool isDark = readIsDark();
+  const bool isObjectDetected = readIsObjectDetected();
+  const bool isOn = isDark && isObjectDetected;
 
-  updateAmbientMode(ldrValue);
-  updateFadeTarget(irDetected, now);
-  fadeLamp(now);
-  printStatus(ldrValue, irDetected, now);
+  digitalWrite(MOSFET_PIN, isOn ? HIGH : LOW);
+  printStatus(isDark, isOn, now);
 }

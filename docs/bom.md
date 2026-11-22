@@ -10,18 +10,16 @@ Quantities below support the full 3-pole prototype and include useful spares.
 | Component | Quantity | Xpark Lab Ref. / Part | Notes |
 |---|---:|---|---|
 | Arduino UNO | 1 pc | — | Main controller |
-| IRF540N / IRLZ44N N-channel MOSFET | 6 pcs | — | IRLZ44N preferred for 5 V logic |
-| FC-51 IR obstacle sensor | 6 pcs | — | 3.3–5 V, 2–30 cm adjustable range |
-| LDR 5 mm | 4 pcs | — | Ambient sensing and spares |
-| LDR sensor module | 1 pc | — | Optional module; bench sensor reference |
-| 5 mm LED, Red | 5 pcs | — | Test load/status indicator |
-| 5 mm LED, Blue | 5 pcs | — | Test load/status indicator |
-| 5 mm LED, Green | 5 pcs | — | Test load/status indicator |
-| 47 Ω resistor | 10 pcs | — | MOSFET/load experiment series resistor |
-| 100 Ω resistor | 15 pcs | — | Gate resistor and low-load experiment resistor |
-| 220 Ω resistor | 10 pcs | — | Gate resistor |
-| 1 kΩ resistor | 10 pcs | — | General-purpose circuit resistor |
-| 10 kΩ resistor | 10 pcs | — | LDR divider and gate pull-down |
+| IRF540N N-channel MOSFET | 3 pcs | — | Pin 1 Gate, Pin 2 Drain, Pin 3 Source |
+| FC-51 IR obstacle sensor module | 3 pcs | — | Digital OUT, active LOW when object detected |
+| Digital LDR sensor module | 1 pc | — | 3-pin VCC/GND/DO; DO active HIGH in dark |
+| 5 mm LED | 3 pcs | — | One load per MOSFET channel |
+| 100 Ω resistor | 3 pcs | — | Gate resistor, one per MOSFET |
+| 10 kΩ resistor | 3 pcs | — | Gate-to-GND pull-down, one per MOSFET |
+| 220 Ω resistor | 3 pcs | — | LED series resistor, one per LED |
+| 47 Ω resistor | Optional | — | Additional low-load experiment resistor |
+| 1 kΩ resistor | Optional | — | General-purpose |
+| 10 kΩ resistor | 1 spare | — | Optional spare/generic |
 | Aluminum heatsink | 3 pcs | — | MOSFET thermal management |
 | 14500 3.7 V 1300 mAh rechargeable lithium battery | 3 pcs | — | DC experiment supply only |
 | 14500 battery case | 1 pc | — | Holds 14500 cells |
@@ -29,7 +27,6 @@ Quantities below support the full 3-pole prototype and include useful spares.
 | Jumper wires F-F | 1 set | — | Sensor/module connections |
 | Jumper wires M-M / F-F / M-F | 1 set each | — | Breadboard and hardware interface |
 | Breadboard | 1 pc | — | Prototyping |
-| 150 Ω resistor | 3 pcs | — | Typical 5 V LED series resistor; calculate by LED datasheet |
-| 1N5408 diode | 3 pcs | — | Optional flyback diode for inductive DC loads |
+| 1N5408 diode | Optional | — | Flyback diode for inductive DC loads only |
 
-> **Assembly note:** For the 3-pole implementation, use 3 FC-51 sensors and 3 MOSFET channels. Extra BOM parts support the single-pole variant, spares, and future experiments.
+> **Assembly note:** The finalized 3-pole implementation uses exactly 3 IRF540N devices, 3 LEDs, 3x 100 Ω gate resistors, 3x 10 kΩ gate pull-down resistors, and 3x 220 Ω LED series resistors.

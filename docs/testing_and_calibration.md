@@ -5,138 +5,97 @@ Bashundhara R/A, Dhaka, Bangladesh
 
 ## 1. Before Power-Up
 
-1. Verify Arduino UNO board selection and serial port.
-2. Confirm the LDR divider is wired to `A0`, ground, and 5 V.
-3. Confirm FC-51 sensor outputs match `D2/D3/D4`.
-4. Confirm MOSFET gates match `D9/D10/D11`.
-5. Add a 100–220 Ω gate resistor and 10 kΩ gate pull-down.
-6. Start with low-voltage LED loads, not mains or unknown lamp loads.
+1. Verify the Arduino UNO board and serial port in the Arduino IDE.
+2. Connect the digital LDR module VCC/GND to `5V/GND` and DO to `D2`.
+3. Connect IR sensor 1, 2, and 3 OUT pins to `D3`, `D4`, and `D5`.
+4. Connect MOSFET gates to `D9`, `D10`, and `D11` through separate 100 Ω resistors.
+5. Add a separate 10 kΩ pull-down between every Gate pin and common GND.
+6. Use low-voltage LEDs and 220 Ω series resistors for initial testing.
 
-## 2. Upload and Serial Monitor
+## 2. Digital Sensor Test
 
-1. Open `firmware/single_pole/single_pole.ino` or `firmware/multi_pole_3_lights/multi_pole_3_lights.ino`.
-2. Select **Arduino UNO**.
-3. Upload the sketch.
-4. Open Serial Monitor.
-5. Set baud rate to **9600**.
-6. Confirm periodic `LDR`, `Mode`, `IR`, and `Brightness` output.
+1. Open `test/sensor_test/sensor_test.ino`.
+2. Select **Arduino UNO** and upload the sketch.
+3. Open Serial Monitor and set the baud rate to **9600**.
+4. Cover the digital LDR module and confirm `LDR: Dark`.
+5. Shine light on the module and confirm `LDR: Light`.
+6. Wave an object in front of IR 1, IR 2, and IR 3 in turn.
+7. Confirm the matching channel shows `Object`, then `No Object`.
 
-For the 3-pole firmware, status is compact:
-
-```text
-LDR:390 Mode:NIGHT | P1:IR-:64 | P2:IR+:255 | P3:IR-:64
-```
-
-## 3. LDR Calibration
-
-The default thresholds are:
-
-- Night: ADC value below `400`
-- Day: ADC value above `450`
-- Dead band: `400–450`
-
-The dead band prevents rapid toggling while light levels change.
-
-### Calibration procedure
-
-1. In normal daytime conditions, cover the LDR with the hand and record Serial Monitor readings.
-2. In fully dark conditions, record the lowest stable reading.
-3. Shine a flashlight directly over the LDR and record the bright reading.
-4. Adjust `DARK_THRESHOLD` and `BRIGHT_THRESHOLD` only if the default values do not match the installation.
-5. Keep the dark threshold lower than the bright threshold.
-6. Use a separation of at least 30–50 ADC counts when the environment has light flicker.
-
-Example for a stable outdoor installation:
+If LDR results are reversed, set:
 
 ```cpp
-// Start at defaults; increase only after outdoor logging.
-const int DARK_THRESHOLD = 400;
-const int BRIGHT_THRESHOLD = 450;
+const bool LDR_ACTIVE_HIGH_IN_DARK = false;
 ```
 
-## 4. FC-51 Calibration
-
-1. Power the sensor at 3.3–5 V.
-2. Rotate the blue potentiometer counter-clockwise for a shorter range.
-3. Rotate it clockwise for a longer range.
-4. Begin with 10–15 cm for indoor bench testing.
-5. Cover the sensor face and wave a hand through the target range.
-6. Confirm `IR: DETECTED` in the single-pole status or `IR+` in the 3-pole status.
-7. Remove the object and confirm `IR: CLEAR` or `IR-`.
-
-Standard FC-51 modules are active LOW. If the status is inverted, set:
+Standard IR modules are active LOW. If an IR sensor behaves in reverse, set:
 
 ```cpp
 const bool IR_ACTIVE_LOW = false;
 ```
 
-Mount sensors low enough to detect the intended object but shielded from direct lamp glare.
+Example sensor-test output:
 
-## 5. MOSFET and Lamp Test
+```text
+LDR: Dark | IR1: Object | IR2: No Object | IR3: No Object
+```
 
-1. Disconnect the lamp supply.
-2. Connect the MOSFET source to common ground.
-3. Connect the gate to PWM through 100–220 Ω.
-4. Add the 10 kΩ gate pull-down.
-5. Connect a low-voltage LED or lamp rated for the supply.
-6. Add a 150 Ω series resistor for a typical 5 V LED; derive the resistor from the LED datasheet for other parts.
-7. Apply power and observe the standby value of 64 at night.
-8. Measure MOSFET temperature during continuous operation.
-9. Add an aluminum heatsink and improve ventilation if temperature rises excessively.
+## 3. Main Firmware Test
 
-## 6. Required Functional Test
+1. Disconnect the LED supply.
+2. Complete all three MOSFET, gate resistor, and pull-down connections.
+3. For each LED, connect `5V → 220 Ω → LED anode → LED cathode → MOSFET Drain`.
+4. Connect every MOSFET Source to common GND.
+5. Upload `firmware/multi_pole_3_lights/multi_pole_3_lights.ino`.
+6. Open Serial Monitor at **9600 baud**.
 
-### LDR turns lamp ON in dim mode
+Example main-firmware output:
 
-1. Place the board in a dark area.
-2. Wait for the LDR reading to fall below 400.
-3. Confirm `Mode: NIGHT`.
-4. Confirm PWM brightness settles near `64`.
+```text
+LDR: Dark | Ch1: ON | Ch2: OFF | Ch3: OFF
+```
 
-### Hand wave triggers full brightness
+## 4. Functional Test
 
-1. While nighttime mode is active, wave a hand in front of the FC-51 sensor.
-2. Confirm `IR: DETECTED`.
-3. Confirm brightness ramps to `255`.
-4. Keep the object clear for at least 5 seconds.
-5. Confirm brightness fades back toward `64`.
+### Startup OFF test
 
-### Flashlight turns lamp OFF
+1. With no Arduino or sensor input active, verify all three channels report `OFF`.
+2. Verify that all three LED loads remain off.
 
-1. Shine a flashlight on the LDR.
-2. Confirm the reading rises above 450.
-3. Confirm `Mode: DAY`.
-4. Confirm PWM brightness settles at `0`.
+### Dark and object test
 
-### Three-pole follow test
+1. Cover the digital LDR until Serial Monitor reports `Dark`.
+2. Wave an object across IR 1 only.
+3. Confirm `Ch1: ON`; confirm `Ch2: OFF` and `Ch3: OFF`.
+4. Repeat with IR 2 and IR 3.
 
-1. Illuminate the sensor for Pole 1.
-2. Confirm Pole 1 ramps to full.
-3. If look-ahead is enabled, confirm the next pole also reaches full.
-4. Move detections toward Pole 2 and Pole 3.
-5. Confirm unheld poles return from full to 64 standby.
+### Light test
 
-## 7. Serial Troubleshooting
+1. Shine light on the digital LDR until it reports `Light`.
+2. Detect objects with every IR sensor.
+3. Confirm `Ch1`, `Ch2`, and `Ch3` remain `OFF`.
+
+## 5. Serial Troubleshooting
 
 | Symptom | Check |
 |---|---|
-| No Serial output | Correct COM port and 9600 baud |
-| LDR stuck near 1023 | Sensor divider wiring or shorted signal |
-| LDR stuck near 0 | Wrong divider orientation or 10 kΩ location |
-| IR never detects | 5 V supply, OUT pin, potentiometer, inversion setting |
-| Lamp off in every mode | MOSFET gate, ground, PWM pin, load supply |
-| Lamp stuck full | Sensor stuck LOW; gate switching; target hold logic |
-| Flickering at dusk | Increase hysteresis gap or shield LDR |
-| MOSFET hot | Add heatsink, verify IRLZ44N/IRF540N suitability, load current |
+| No Serial output | USB connection, COM port, and 9600 baud |
+| LDR stuck on one state | DO to `D2`, VCC/GND wiring, inversion constant |
+| IR never detects | 5 V supply, OUT pin, potentiometer, inversion constant |
+| LED stays off | Gate wiring, 100 Ω resistor, 10 kΩ pull-down, 220 Ω LED resistor |
+| LED stays on | Sensor stuck active, Gate stuck HIGH, wiring at `D9/D10/D11` |
+| One channel only is wrong | Check that channel's IR, MOSFET, gate resistor, pull-down, and LED |
+| MOSFET hot | Stop operation, verify Source/Gate/Drain pin order and load current |
 
-## 8. Handover Checklist
+## 6. Handover Checklist
 
-- [ ] Day mode turns PWM off.
-- [ ] Night mode provides dim standby.
-- [ ] IR detection reaches full brightness.
-- [ ] Hold duration lasts 5 seconds after final detection.
-- [ ] Fade behavior is smooth.
+- [ ] Digital LDR reports `Dark` and `Light` correctly.
+- [ ] IR 1 reports `Object` on `D3`.
+- [ ] IR 2 reports `Object` on `D4`.
+- [ ] IR 3 reports `Object` on `D5`.
+- [ ] All three MOSFET gates use 100 Ω resistors.
+- [ ] All three gates use 10 kΩ pull-down resistors.
+- [ ] Every LED uses a 220 Ω series resistor.
+- [ ] Startup writes LOW to `D9`, `D10`, and `D11`.
 - [ ] Serial Monitor reports at 9600 baud.
-- [ ] All grounds are common.
-- [ ] Lamp supply and enclosure are safely fused.
-- [ ] MOSFET devices are heatsinked when required.
+- [ ] Only dark plus a matching detected object turns a channel ON.
